@@ -35,3 +35,42 @@ def test_tool_call():
         "parameters":{"type":"object","properties":{"expr":{"type":"string"}},"required":["expr"]}}}]
     r = c.chat_with_tools([{"role":"user","content":"计算 1+1"}], tools=tools)
     assert r.get("content") or r.get("tool_calls")
+
+
+import json
+
+
+def test_kg_extraction():
+    c = setup()
+    content = ""
+    for chunk in c.chat(
+        [
+            {"role": "system", "content": "提取关于「Transformer」的核心概念和关系，以 JSON 格式输出"},
+            {"role": "user", "content": "分析 Transformer"},
+        ],
+        stream=True,
+        reasoning_effort="high",
+    ):
+        content += chunk["content"]
+
+    data = json.loads(content)
+    concepts = data.get("entities") or data.get("core_concepts") or []
+    assert len(concepts) >= 4
+    raw = json.dumps(data)
+    assert "Transformer" in raw or "transformer" in raw.lower()
+
+
+def test_kg_explanation():
+    c = setup()
+    explain = ""
+    for chunk in c.chat(
+        [
+            {"role": "system", "content": "用通俗的语言解释 Transformer 的核心概念"},
+            {"role": "user", "content": "解释 Transformer"},
+        ],
+        stream=True,
+        reasoning_effort="low",
+    ):
+        explain += chunk["content"]
+
+    assert "Transformer" in explain

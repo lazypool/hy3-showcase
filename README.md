@@ -26,6 +26,7 @@ Hy3 CLI (Mock)  http://localhost:8000/v1  hy3
 |------|-----------------|-------------------|
 | CLI | `python cli.py "你好"` | `HY3_API_KEY=sk-xxx python cli.py` |
 | Web | `python app.py` | `HY3_API_KEY=sk-xxx python app.py` |
+| 知识图谱 | `python kg.py` | `HY3_API_KEY=sk-xxx python kg.py` |
 
 ### CLI 命令行
 
@@ -45,6 +46,15 @@ python app.py
 
 三个标签页：对话（支持三级推理切换）、工具调用（计算器 Agent）、关于（当前模式）。
 
+### 🧠 知识图谱（创意应用）
+
+```bash
+python kg.py
+# 浏览器打开 http://localhost:7861
+```
+
+输入任意主题（如 Transformer、注意力机制），Hy3 自动提取核心概念与关系，生成可视化知识图谱和通俗解释。
+
 ## 项目结构
 
 ```
@@ -55,16 +65,19 @@ hy3-showcase/
 │   └── mock.py         Mock 响应数据
 ├── app.py              Web 界面
 ├── cli.py              命令行
+├── kg.py               知识图谱创意应用
 ├── run/                演示脚本
 │   ├── cli-mock.py     CLI + Mock
 │   ├── cli-e2e.py      CLI + 真实 API
 │   ├── app-mock.py     Web + Mock 截图
-│   └── app-e2e.py      Web + 真实 API 截图
+│   ├── app-e2e.py      Web + 真实 API 截图
+│   └── kg-e2e.py        知识图谱截图
 ├── tests/              测试
-│   ├── test_mock.py    8 项 Mock 测试
-│   ├── test_e2e.py     4 项端到端测试
-│   ├── test_cli.py     CLI 冒烟
-│   └── test_app.py     Web 集成测试
+│   ├── test-mock.py    8 项 Mock 测试
+│   ├── test-e2e.py     4 项端到端测试
+│   ├── test-cli.py     CLI 冒烟
+│   ├── test-app.py     Web 集成测试
+│   └── test-kg.py      知识图谱单元测试
 ├── demo/               运行输出
 │   ├── cli-mock.txt    CLI + Mock 对话实录
 │   ├── cli-e2e.txt     CLI + 真实 API 对话实录
@@ -95,19 +108,28 @@ export HY3_API_BASE="https://tokenhub.tencentmaas.com/v1"
 export HY3_API_KEY=sk-xxxx
 python app.py & # 先启动 app
 python run/app-e2e.py
+
+# 知识图谱真实 API 截图
+export HY3_API_BASE="https://tokenhub.tencentmaas.com/v1"
+export HY3_API_KEY=sk-xxxx
+python kg.py & # 先启动 kg
+python run/kg-e2e.py
 ```
 
 ### 运行测试
 
 ```bash
-# 全部 14 项
-pytest tests/ -v
+# 全部（忽略 e2e）
+pytest tests/ --ignore=tests/test-e2e.py --ignore=tests/kg-e2e.py -v
 
 # 按类别
-pytest tests/test_mock.py -v   # Mock
-pytest tests/test_e2e.py -v    # 真实 API（需 Key）
-pytest tests/test_cli.py -v    # CLI 冒烟
-pytest tests/test_app.py -v    # Web 集成（需 Playwright）
+pytest tests/test-mock.py -v      # Mock 模式（无需 Key）
+pytest tests/test-cli.py -v       # CLI 冒烟（Mock）
+pytest tests/test-kg.py -v        # 知识图谱单元测试（无需 Key）
+pytest tests/test-app.py -v       # Web 集成（需 Playwright）
+
+# 端到端测试（需设置 HY3_API_KEY）
+pytest tests/test-e2e.py -v       # API 基础 + 知识图谱提取/解释
 ```
 
 ### 演示输出预览
@@ -141,8 +163,11 @@ pytest tests/test_app.py -v    # Web 集成（需 Playwright）
   ────────────────────────────────────────
 ```
 
-`demo/app-mock-chat.png`
+`demo/screenshots/app-mock-chat.png`
 ![Web 聊天截图](demo/screenshots/app-mock-chat.png)
+
+`demo/screnshots/kg-graph.png`
+![知识图谱截图](demo/screenshots/kg-graph.png)
 
 ## 环境变量
 
