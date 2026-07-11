@@ -1,6 +1,5 @@
-import os
 import gradio as gr
-from hy3_showcase import Hy3Client
+from hy3_showcase import Hy3Client, StreamChunk
 
 REASONING_OPTIONS = {
     "直接回复 (no_think)": "no_think",
@@ -41,14 +40,11 @@ def chat(message, history, reasoning_mode):
         messages.append({"role": "assistant", "content": h[1]})
     messages.append({"role": "user", "content": message})
 
-    stream = client.chat(messages, stream=True, reasoning_effort=reasoning_effort)
     collected = ""
+    stream = client.chat(messages, stream=True, reasoning_effort=reasoning_effort)
     for chunk in stream:
-        delta = chunk.choices[0].delta
-        if delta.content:
-            collected += delta.content
-            yield collected, history
-
+        collected += chunk.content
+        yield collected, history
     history.append((message, collected))
     yield collected, history
 
@@ -57,8 +53,8 @@ def tool_call_demo():
     messages = [
         {"role": "user", "content": "计算 (238491 * 78345) / 100 的结果是多少？"}
     ]
-    result = client.chat_with_tools(messages, tools=TOOLS_DEMO, reasoning_effort="high")
-    return result
+    resp = client.chat_with_tools(messages, tools=TOOLS_DEMO, reasoning_effort="high")
+    return resp.to_text()
 
 
 with gr.Blocks(title="Hy3 Showcase", theme=gr.themes.Soft()) as demo:

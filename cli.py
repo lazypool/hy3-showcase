@@ -21,15 +21,12 @@ def main():
         messages = [{"role": "user", "content": args.prompt}]
         if args.stream:
             print("--- 流式输出 ---")
-            stream = client.chat(messages, stream=True, reasoning_effort=args.reasoning)
-            for chunk in stream:
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    print(delta.content, end="", flush=True)
+            for chunk in client.chat(messages, stream=True, reasoning_effort=args.reasoning):
+                print(chunk.content, end="", flush=True)
             print()
         else:
-            response = client.chat(messages, stream=False, reasoning_effort=args.reasoning)
-            print(response.choices[0].message.content)
+            resp = client.chat(messages, stream=False, reasoning_effort=args.reasoning)
+            print(resp.to_text())
         return
 
     print("交互模式（输入 /exit 退出）")
@@ -39,8 +36,8 @@ def main():
             if user_input.lower() in ("/exit", "/quit"):
                 break
             messages = [{"role": "user", "content": user_input}]
-            response = client.chat(messages, stream=False, reasoning_effort="no_think")
-            print(response.choices[0].message.content)
+            resp = client.chat(messages, stream=False, reasoning_effort="no_think")
+            print(resp.to_text())
         except KeyboardInterrupt:
             print("\n再见！")
             break
