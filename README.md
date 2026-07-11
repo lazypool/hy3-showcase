@@ -14,11 +14,15 @@ hy3-showcase/
 │   └── config.py        # 配置加载（环境变量）
 ├── app.py               # Gradio Web 应用
 ├── cli.py               # 命令行聊天客户端
+├── scripts/
+│   └── e2e_test.py      # 端到端验证脚本（提供 API Key 即可运行）
 ├── tests/
 │   └── test_mock.py     # 10 项 Mock 单元测试
 ├── demo/
-│   └── mock-session.txt # Mock 模式端到端测试记录
+│   ├── mock-session.txt # Mock 模式端到端测试记录
+│   └── real-session.txt # 真实 Hy3 API 端到端测试记录
 ├── .env.example         # 环境变量模板
+├── .gitignore
 ├── requirements.txt     # Python 依赖
 └── README.md            # 本文件
 ```
@@ -30,7 +34,7 @@ hy3-showcase/
 - **工具调用** — Function Calling 演示（计算器 Agent）
 - **双形态** — Web 界面（Gradio）+ CLI 命令行
 - **流式输出** — 实时显示生成内容
-- **10 项测试** — 覆盖全部核心功能（`python -m pytest`）
+- **10 项单元测试** + **6 项端到端验证**
 
 ## 🚀 快速开始
 
@@ -45,7 +49,6 @@ pip install -r requirements.txt
 ### 运行（Mock 模式——无需 API Key）
 
 ```bash
-# Mock 模式：不设置 HY3_API_KEY 自动进入
 export HY3_MOCK=true
 
 # 方式 A：Web 界面
@@ -55,32 +58,80 @@ python app.py
 # 方式 B：命令行
 python cli.py "你好！请介绍一下你自己"
 python cli.py --stream --reasoning high "用 Python 写一个快排"
+python cli.py --reasoning high "24点问题：3, 3, 8, 8"
 python cli.py -i  # 交互模式
 ```
 
-### 运行（真实 Hy3 模式）
+### 运行（真实 Hy3 / OpenAI 兼容 API）
 
 ```bash
-export HY3_API_BASE="http://your-server:8000/v1"
-export HY3_API_KEY="your-key"
+export HY3_API_BASE="https://tokenhub.tencentmaas.com/v1"
+export HY3_API_KEY="sk-xxxxxxxxxxxxxxxx"
 export HY3_MODEL="hy3"
 
 python app.py
 ```
 
-### 运行测试
+## 🧪 端到端验证
+
+提供 API Key 即可一键运行 6 项端到端测试：
 
 ```bash
+# 方式一：环境变量
+export HY3_API_KEY="sk-xxxxxxxx"
+python scripts/e2e_test.py
+
+# 方式二：命令行参数
+python scripts/e2e_test.py --api-key sk-xxxxxxxx
+
+# Mock 模式（无需 Key）
+python scripts/e2e_test.py --mock
+```
+
+### 测试内容
+
+| # | 测试项 | 说明 |
+|---|--------|------|
+| 1 | 基础对话 | 非流式请求，验证 API 连通性 |
+| 2 | 多轮对话 | 上下文保持能力，验证指代消解 |
+| 3 | 流式输出 | 逐 chunk 流式代码生成 |
+| 4 | 深度推理 | reasoning_effort=high 思维链 |
+| 5 | 工具调用 | Function Calling Agent 能力 |
+| 6 | CLI 可用性 | 命令行端到端冒烟测试 |
+
+### 真实 API 测试结果
+
+使用 TokenHub 端点 (`hy3` 模型) 实测：
+
+```
+=== Hy3 端到端验证 (🟢 真实 API 模式) ===
+  ✅ PASS  非流式请求成功
+  ✅ PASS  多轮对话成功
+  ✅ PASS  流式输出有内容
+  ✅ PASS  high 模式返回结果
+  ✅ PASS  工具调用成功
+  ✅ PASS  CLI 可执行
+结果汇总:  ✅ PASS 6/6
+```
+
+详细记录见 [`demo/real-session.txt`](demo/real-session.txt)。
+
+### 单元测试
+
+```bash
+# Mock 模式单元测试（无需 API Key）
 python -m pytest tests/ -v
 ```
 
-输出示例：
-```
-tests/test_mock.py::TestHy3MockClient::test_basic_chat PASSED
-tests/test_mock.py::TestHy3MockClient::test_quicksort_mock PASSED
-...
-============================== 10 passed in 2.20s ==============================
-```
+## 🎬 演示流程
+
+| Demo | 命令 | 说明 |
+|------|------|------|
+| 1 | `python cli.py "介绍一下 MoE 架构"` | 智能对话（no_think） |
+| 2 | `python cli.py --reasoning high "24点问题：3, 3, 8, 8"` | 深度推理（high） |
+| 3 | 访问 Web 界面 → 工具调用标签页 | Agent 工具调用 |
+| 4 | `python cli.py --stream "用 Python 写一个快速排序"` | 流式代码生成 |
+| 5 | `python cli.py -i` | 交互式多轮对话 |
 
 ## 🧩 Hy3 在项目中的角色
 
@@ -92,39 +143,14 @@ tests/test_mock.py::TestHy3MockClient::test_quicksort_mock PASSED
 
 当无 API Key 时，`hy3_showcase/client.py` 自动降级为 **Mock 模式**，基于关键词驱动返回预置响应，确保离线可演示。
 
-## 🎬 端到端 Demo 流程
+## ⚙️ 环境变量
 
-**Demo 1 — 智能对话（no_think）**
-
-```
-$ python cli.py "介绍一下你自己"
-→ 我是 **Hy3**，由腾讯混元团队研发的快慢思考融合混合专家模型（MoE）。
-  我有 295B 总参数量、21B 激活参数，支持 256K 上下文...
-```
-
-**Demo 2 — 深度推理（high）**
-
-```
-$ python cli.py --reasoning high "24点问题：3, 3, 8, 8"
-→ 【推理过程】1. 分析问题...   【最终回答】8 ÷ (3 - 8 ÷ 3) = 24
-```
-
-**Demo 3 — 工具调用（Agent）**
-
-```
-Web 界面 → 工具调用标签页 → 点击「运行演示」
-→ Hy3 调用了计算器工具：(238491 * 78345) / 100
-```
-
-完整 Mock 模式测试记录见 [`demo/mock-session.txt`](demo/mock-session.txt)。
-
-## 推理模式说明
-
-| 模式 | 值 | 适用场景 | 示例问题 |
-|------|-----|---------|---------|
-| 直接回复 | `no_think` | 日常问答 | "介绍一下 MoE 架构" |
-| 轻度推理 | `low` | 中等复杂度 | "用 Python 写一个装饰器" |
-| 深度推理 | `high` | 复杂推理 | "设计一个分布式缓存系统" |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `HY3_API_BASE` | `http://localhost:8000/v1` | API 端点地址 |
+| `HY3_API_KEY` | `""` | API 密钥（留空则进入 Mock 模式） |
+| `HY3_MODEL` | `hy3` | 模型名称 |
+| `HY3_MOCK` | `false` | 设为 `true` 强制 Mock 模式 |
 
 ## 在主流工具中使用 Hy3
 

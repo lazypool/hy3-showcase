@@ -100,6 +100,16 @@ def _mock_chat(messages, reasoning_effort="no_think"):
 
 
 def _mock_reasoning_response(prompt):
+    if "24" in prompt and "点" in prompt:
+        return (
+            "**【推理过程】**\n\n"
+            "1. 分析问题：需要从 3, 3, 8, 8 四个数字通过四则运算得到 24\n"
+            "2. 尝试组合：8 × 3 = 24，剩余 3 和 8 无法消去\n"
+            "3. 尝试除法：8 ÷ 3 ≈ 2.667，3 - 2.667 = 0.333，8 ÷ 0.333 = 24\n"
+            "4. 验证：8 ÷ (3 - 8 ÷ 3) = 24 ✅\n\n"
+            "**【最终回答】**\n\n"
+            "8 ÷ (3 - 8 ÷ 3) = 24"
+        )
     return (
         "**【推理过程】**\n\n"
         "1. 分析问题：这是一个需要深度推理的问题\n"
