@@ -1,79 +1,57 @@
-import os
-import sys
-import unittest
-
+import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from hy3_showcase import Hy3Client
-from hy3_showcase._mock_data import select_content
 
 
-class TestHy3MockClient(unittest.TestCase):
-    def setUp(self):
-        os.environ["HY3_MOCK"] = "true"
-        self.client = Hy3Client()
-
-    def test_mock_mode_enabled(self):
-        self.assertTrue(self.client.mock)
-
-    def test_basic_chat(self):
-        resp = self.client.chat([{"role": "user", "content": "你好"}], stream=False)
-        text = resp.to_text()
-        self.assertIsNotNone(text)
-        self.assertIn("Hy3", text)
-
-    def test_streaming_chat(self):
-        stream = self.client.chat(
-            [{"role": "user", "content": "介绍一下你自己"}], stream=True
-        )
-        chunks = [c.content for c in stream]
-        text = "".join(chunks)
-        self.assertGreater(len(text), 0)
-
-    def test_quicksort_mock(self):
-        resp = self.client.chat(
-            [{"role": "user", "content": "用 Python 写一个快速排序"}], stream=False
-        )
-        self.assertIn("quicksort", resp.to_text().lower())
-
-    def test_moe_explanation(self):
-        resp = self.client.chat(
-            [{"role": "user", "content": "解释 MoE 架构"}], stream=False
-        )
-        self.assertIn("MoE", resp.to_text())
-
-    def test_high_reasoning(self):
-        resp = self.client.chat(
-            [{"role": "user", "content": "24点问题：3, 3, 8, 8"}],
-            stream=False,
-            reasoning_effort="high",
-        )
-        text = resp.to_text()
-        self.assertTrue("24" in text or "推理" in text)
-
-    def test_tool_calling_calculator(self):
-        resp = self.client.chat_with_tools(
-            [{"role": "user", "content": "计算 (238491 * 78345) / 100"}],
-            reasoning_effort="high",
-        )
-        self.assertIn("calculator", resp.to_text().lower())
-
-    def test_distributed_system_design(self):
-        resp = self.client.chat(
-            [{"role": "user", "content": "设计一个分布式缓存系统"}], stream=False
-        )
-        self.assertIn("分布式", resp.to_text())
-
-    def test_mock_chat_fallback(self):
-        text = select_content([{"role": "user", "content": "一些随机内容"}])
-        self.assertIsNotNone(text)
-
-    def test_flask_app_generation(self):
-        resp = self.client.chat(
-            [{"role": "user", "content": "创建一个 Flask Web 应用"}], stream=False
-        )
-        self.assertIn("Flask", resp.to_text())
+def setup():
+    os.environ["HY3_MOCK"] = "true"
+    return Hy3Client()
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_chat():
+    c = setup()
+    r = c.chat([{"role": "user", "content": "你好"}], stream=False)
+    assert r["content"]
+    assert "Hy3" in r["content"]
+
+def test_stream():
+    c = setup()
+    chunks = list(c.chat([{"role": "user", "content": "介绍自己"}], stream=True))
+    assert len(chunks) >= 2
+    assert "".join(c["content"] for c in chunks)
+
+def test_quicksort():
+    c = setup()
+    r = c.chat([{"role": "user", "content": "用 Python 写一个快速排序"}], stream=False)
+    assert "quicksort" in r["content"].lower()
+
+def test_moe():
+    c = setup()
+    r = c.chat([{"role": "user", "content": "解释 MoE 架构"}], stream=False)
+    assert "MoE" in r["content"]
+
+def test_reasoning():
+    c = setup()
+    r = c.chat([{"role": "user", "content": "24点：3,3,8,8"}],
+               stream=False, reasoning_effort="high")
+    assert "24" in r["content"]
+
+def test_tool_call():
+    c = setup()
+    tools = [{"type":"function","function":{"name":"calculator","description":"计算器",
+        "parameters":{"type":"object","properties":{"expr":{"type":"string"}},"required":["expr"]}}}]
+    r = c.chat_with_tools(
+        [{"role":"user","content":"计算 (238491 * 78345) / 100"}], tools=tools)
+    assert r.get("tool_calls")
+    assert "calculator" in r["tool_calls"][0]["function"]["name"]
+
+def test_distributed():
+    c = setup()
+    r = c.chat([{"role":"user","content":"设计分布式缓存"}], stream=False)
+    assert "分布式" in r["content"]
+
+def test_flask():
+    c = setup()
+    r = c.chat([{"role":"user","content":"Flask 待办应用"}], stream=False)
+    assert "Flask" in r["content"]
